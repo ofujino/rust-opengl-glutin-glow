@@ -1,0 +1,9 @@
+[package]
+name = "rust-glutin-opengl"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+glutin = "*"
+glow = "*"
+gl_matrix = "*"
