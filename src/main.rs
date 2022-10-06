@@ -9,7 +9,7 @@ fn main() {
         let window_builder = glutin::window::WindowBuilder::new()
             .with_inner_size(glutin::dpi::LogicalSize::new(640, 480));
 
-        let window = glutin::ContextBuilder::new()
+        let context = glutin::ContextBuilder::new()
             .with_vsync(true)
             // see: http://michaelshaw.io/rust-game-24h-talk/talk.html#/20
             //.with_gl_profile(glutin::GlProfile::Core)
@@ -19,7 +19,7 @@ fn main() {
             .make_current()
             .unwrap();
 
-        let gl = glow::Context::from_loader_function(|s| window.get_proc_address(s) as *const _);
+        let gl = glow::Context::from_loader_function(|s| context.get_proc_address(s) as *const _);
 
         let program = gl.create_program().unwrap();
 
@@ -86,7 +86,7 @@ fn main() {
             control_flow.set_wait();
             match event {
                 glutin::event::Event::MainEventsCleared => {
-                    window.window().request_redraw();
+                    context.window().request_redraw();
                 }
                 glutin::event::Event::RedrawRequested(_) => {
                     gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
@@ -112,7 +112,7 @@ fn main() {
                     mat4::perspective(
                         &mut proj_matrix,
                         to_radian(45.),
-                        window.window().inner_size().width as f32 / window.window().inner_size().height as f32,
+                        context.window().inner_size().width as f32 / context.window().inner_size().height as f32,
                         0.1,
                         Some(100.0),
                     );
@@ -125,7 +125,7 @@ fn main() {
                     gl.draw_arrays(glow::TRIANGLES, 0, 3);
                     gl.use_program(None);
                     gl.bind_vertex_array(None);
-                    window.swap_buffers().unwrap();
+                    context.swap_buffers().unwrap();
                     frame += 1.0;
                 }
                 glutin::event::Event::WindowEvent { event, .. } => match event {
