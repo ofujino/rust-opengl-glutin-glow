@@ -899,7 +899,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-glutin-opengl"
+name = "rust-opengl-glutin-glow"
 version = "0.1.0"
 dependencies = [
  "gl_matrix",

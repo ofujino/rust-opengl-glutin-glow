@@ -21,64 +21,31 @@ fn main() {
 
         let gl = glow::Context::from_loader_function(|s| context.get_proc_address(s) as *const _);
 
-        let program = gl.create_program().unwrap();
+        let program = create_shader_program(
+            &gl,
+            &include_str!("shader.vert"),
+            &include_str!("shader.frag"),
+        );
 
         let vertex_array = gl.create_vertex_array().unwrap();
 
-        let vertex_shader = gl.create_shader(glow::VERTEX_SHADER).unwrap();
-        let vertex_shader_source = r#"#version 330
-        const vec2 positions[3] = vec2[3](
-            vec2( 0.0f,  1.0f),
-            vec2(-1.0f, -1.0f),
-            vec2( 1.0f, -1.0f)
-        );
-        const vec3 colors[3] = vec3[3](
-            vec3(1, 0, 0),
-            vec3(0, 1, 0),
-            vec3(0, 0, 1)
-        );
-        out vec4 vColor;
-        uniform mat4 uMMatrix;
-        uniform mat4 uVMatrix;
-        uniform mat4 uPMatrix;
-        void main() {
-            gl_Position = uPMatrix * uVMatrix * uMMatrix *vec4(positions[gl_VertexID % 3], 0.0, 1.0);
-            vColor = vec4(colors[gl_VertexID % 3], 1.0);
-        }"#;
-        gl.shader_source(vertex_shader, vertex_shader_source);
-        gl.compile_shader(vertex_shader);
-        if !gl.get_shader_compile_status(vertex_shader) {
-            panic!("{}", gl.get_shader_info_log(vertex_shader));
-        }
-
-        let fragment_shader = gl.create_shader(glow::FRAGMENT_SHADER).unwrap();
-        let fragment_shader_source = r#"#version 330
-        precision mediump float;
-        in vec4 vColor;
-        out vec4 outColor;
-        void main() {
-            outColor = vColor;
-        }"#;
-        gl.shader_source(fragment_shader, fragment_shader_source);
-        gl.compile_shader(fragment_shader);
-        if !gl.get_shader_compile_status(fragment_shader) {
-            panic!("{}", gl.get_shader_info_log(fragment_shader));
-        }
-
-        gl.attach_shader(program, vertex_shader);
-        gl.attach_shader(program, fragment_shader);
-
-        gl.link_program(program);
-        if !gl.get_program_link_status(program) {
-            panic!("{}", gl.get_program_info_log(program));
-        }
-
-        gl.detach_shader(program, vertex_shader);
-        gl.detach_shader(program, fragment_shader);
-        gl.delete_shader(vertex_shader);
-        gl.delete_shader(fragment_shader);
-
         gl.clear_color(0.2, 0.2, 0.2, 1.0);
+
+        let mut world_matrix: Mat4 = [0.; 16];
+        let mut view_matrix: Mat4 = [0.; 16];
+        let mut proj_matrix: Mat4 = [0.; 16];
+
+        //mat4::identity(&mut view_matrix);
+        //mat4::identity(&mut proj_matrix);
+
+        let eye = vec3::from_values(0., 0., 5.);
+        let center = vec3::from_values(0., 0., 0.);
+        let up = vec3::from_values(0., 1., 0.);
+        let aspect = context.window().inner_size().width as f32
+            / context.window().inner_size().height as f32;
+
+        mat4::look_at(&mut view_matrix, &eye, &center, &up);
+        mat4::perspective(&mut proj_matrix, to_radian(45.), aspect, 0.1, Some(100.0));
 
         let mut frame: f32 = 1.0;
 
@@ -89,39 +56,33 @@ fn main() {
                     context.window().request_redraw();
                 }
                 glutin::event::Event::RedrawRequested(_) => {
+                    mat4::identity(&mut world_matrix);
+                    let tmp = mat4::clone(&world_matrix);
+                    mat4::rotate(
+                        &mut world_matrix,
+                        &tmp,
+                        frame / 20.0,
+                        &vec3::from_values(0., 1., 0.),
+                    );
+
                     gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
                     gl.bind_vertex_array(Some(vertex_array));
                     gl.use_program(Some(program));
-                    let mut world_matrix: Mat4 = [0.; 16];
-                    let mut view_matrix: Mat4 = [0.; 16];
-                    let mut proj_matrix: Mat4 = [0.; 16];
-                    mat4::identity(&mut world_matrix);
-                    mat4::identity(&mut view_matrix);
-                    mat4::identity(&mut proj_matrix);
-                    let eye = vec3::from_values(0., 0., 5.);
-                    let center = vec3::from_values(0., 0., 0.);
-                    let up = vec3::from_values(0., 1., 0.);
-                    let m2 = mat4::clone(&world_matrix);
-                    mat4::rotate(
-                        &mut world_matrix,
-                        &m2,
-                        frame / 20.0,
-                        &[0.0f32, 1.0f32, 0.0f32],
+                    gl.uniform_matrix_4_f32_slice(
+                        gl.get_uniform_location(program, "uMMatrix").as_ref(),
+                        false,
+                        &world_matrix,
                     );
-                    mat4::look_at(&mut view_matrix, &eye, &center, &up);
-                    mat4::perspective(
-                        &mut proj_matrix,
-                        to_radian(45.),
-                        context.window().inner_size().width as f32 / context.window().inner_size().height as f32,
-                        0.1,
-                        Some(100.0),
+                    gl.uniform_matrix_4_f32_slice(
+                        gl.get_uniform_location(program, "uVMatrix").as_ref(),
+                        false,
+                        &view_matrix,
                     );
-                    let l1 = gl.get_uniform_location(program, "uMMatrix");
-                    gl.uniform_matrix_4_f32_slice(l1.as_ref(), false, &world_matrix);
-                    let l2 = gl.get_uniform_location(program, "uVMatrix");
-                    gl.uniform_matrix_4_f32_slice(l2.as_ref(), false, &view_matrix);
-                    let l3 = gl.get_uniform_location(program, "uPMatrix");
-                    gl.uniform_matrix_4_f32_slice(l3.as_ref(), false, &proj_matrix);
+                    gl.uniform_matrix_4_f32_slice(
+                        gl.get_uniform_location(program, "uPMatrix").as_ref(),
+                        false,
+                        &proj_matrix,
+                    );
                     gl.draw_arrays(glow::TRIANGLES, 0, 3);
                     gl.use_program(None);
                     gl.bind_vertex_array(None);
@@ -149,5 +110,40 @@ fn main() {
                 _ => (),
             }
         });
+    }
+}
+
+fn create_shader_program(gl: &glow::Context, vs: &str, fs: &str) -> glow::NativeProgram {
+    unsafe {
+        let program = gl.create_program().unwrap();
+
+        let vertex_shader = gl.create_shader(glow::VERTEX_SHADER).unwrap();
+        gl.shader_source(vertex_shader, vs);
+        gl.compile_shader(vertex_shader);
+        if !gl.get_shader_compile_status(vertex_shader) {
+            panic!("{}", gl.get_shader_info_log(vertex_shader));
+        }
+
+        let fragment_shader = gl.create_shader(glow::FRAGMENT_SHADER).unwrap();
+        gl.shader_source(fragment_shader, fs);
+        gl.compile_shader(fragment_shader);
+        if !gl.get_shader_compile_status(fragment_shader) {
+            panic!("{}", gl.get_shader_info_log(fragment_shader));
+        }
+
+        gl.attach_shader(program, vertex_shader);
+        gl.attach_shader(program, fragment_shader);
+
+        gl.link_program(program);
+        if !gl.get_program_link_status(program) {
+            panic!("{}", gl.get_program_info_log(program));
+        }
+
+        gl.detach_shader(program, vertex_shader);
+        gl.detach_shader(program, fragment_shader);
+        gl.delete_shader(vertex_shader);
+        gl.delete_shader(fragment_shader);
+
+        return program;
     }
 }
