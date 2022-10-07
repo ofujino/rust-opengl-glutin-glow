@@ -1,30 +1,28 @@
-use gl_matrix::common::*;
-use gl_matrix::{mat4, vec3};
 use glow::*;
 
 mod matrix_state;
 use matrix_state::MatrixState;
 
 struct GLMatrixState {
-    world_matrix: Mat4,
-    view_matrix: Mat4,
-    proj_matrix: Mat4,
+    world_matrix: gl_matrix::common::Mat4,
+    view_matrix: gl_matrix::common::Mat4,
+    proj_matrix: gl_matrix::common::Mat4,
 }
 
 impl MatrixState for GLMatrixState {
     fn new(width: u32, height: u32) -> Self {
         let aspect = width as f32 / height as f32;
 
-        let world_matrix: Mat4 = [0.; 16];
-        let mut view_matrix: Mat4 = [0.; 16];
-        let mut proj_matrix: Mat4 = [0.; 16];
+        let world_matrix: gl_matrix::common::Mat4 = [0.; 16];
+        let mut view_matrix: gl_matrix::common::Mat4 = [0.; 16];
+        let mut proj_matrix: gl_matrix::common::Mat4 = [0.; 16];
 
-        let eye = vec3::from_values(0., 0., 5.);
-        let center = vec3::from_values(0., 0., 0.);
-        let up = vec3::from_values(0., 1., 0.);
+        let eye = gl_matrix::vec3::from_values(0., 0., 5.);
+        let center = gl_matrix::vec3::from_values(0., 0., 0.);
+        let up = gl_matrix::vec3::from_values(0., 1., 0.);
 
-        mat4::perspective(&mut proj_matrix, to_radian(45.), aspect, 0.1, Some(100.0));
-        mat4::look_at(&mut view_matrix, &eye, &center, &up);
+        gl_matrix::mat4::perspective(&mut proj_matrix, gl_matrix::common::to_radian(45.), aspect, 0.1, Some(100.0));
+        gl_matrix::mat4::look_at(&mut view_matrix, &eye, &center, &up);
 
         Self {
             world_matrix,
@@ -34,13 +32,13 @@ impl MatrixState for GLMatrixState {
     }
 
     fn update(&mut self, step: f32) {
-        mat4::identity(&mut self.world_matrix);
-        let tmp = mat4::clone(&self.world_matrix);
-        mat4::rotate(
+        gl_matrix::mat4::identity(&mut self.world_matrix);
+        let tmp = gl_matrix::mat4::clone(&self.world_matrix);
+        gl_matrix::mat4::rotate(
             &mut self.world_matrix,
             &tmp,
             step,
-            &vec3::from_values(0., 1., 0.),
+            &gl_matrix::vec3::from_values(0., 1., 0.),
         );
     }
 
