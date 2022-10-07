@@ -50,7 +50,6 @@ fn main() {
         let mut frame: f32 = 1.0;
 
         event_loop.run(move |event, _, control_flow| {
-            control_flow.set_wait();
             match event {
                 glutin::event::Event::MainEventsCleared => {
                     context.window().request_redraw();
