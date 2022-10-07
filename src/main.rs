@@ -2,12 +2,72 @@ use gl_matrix::common::*;
 use gl_matrix::{mat4, vec3};
 use glow::*;
 
+mod matrix_state;
+use matrix_state::MatrixState;
+
+struct GLMatrixState {
+    world_matrix: Mat4,
+    view_matrix: Mat4,
+    proj_matrix: Mat4,
+}
+
+impl MatrixState for GLMatrixState {
+    fn new(width: u32, height: u32) -> Self {
+        let aspect = width as f32 / height as f32;
+
+        let world_matrix: Mat4 = [0.; 16];
+        let mut view_matrix: Mat4 = [0.; 16];
+        let mut proj_matrix: Mat4 = [0.; 16];
+
+        let eye = vec3::from_values(0., 0., 5.);
+        let center = vec3::from_values(0., 0., 0.);
+        let up = vec3::from_values(0., 1., 0.);
+
+        mat4::perspective(&mut proj_matrix, to_radian(45.), aspect, 0.1, Some(100.0));
+        mat4::look_at(&mut view_matrix, &eye, &center, &up);
+
+        Self {
+            world_matrix,
+            view_matrix,
+            proj_matrix,
+        }
+    }
+
+    fn update(&mut self, step: f32) {
+        mat4::identity(&mut self.world_matrix);
+        let tmp = mat4::clone(&self.world_matrix);
+        mat4::rotate(
+            &mut self.world_matrix,
+            &tmp,
+            step,
+            &vec3::from_values(0., 1., 0.),
+        );
+    }
+
+    fn get_world(&self) -> &[f32] {
+        return &self.world_matrix;
+    }
+
+    fn get_view(&self) -> &[f32] {
+        return &self.view_matrix;
+    }
+
+    fn get_projection(&self) -> &[f32] {
+        return &self.proj_matrix;
+    }
+}
+
 fn main() {
+    let width = 640;
+    let height = 480;
+
+    let mut state = GLMatrixState::new(width, height);
+
     unsafe {
         let event_loop = glutin::event_loop::EventLoop::new();
 
         let window_builder = glutin::window::WindowBuilder::new()
-            .with_inner_size(glutin::dpi::LogicalSize::new(640, 480));
+            .with_inner_size(glutin::dpi::LogicalSize::new(width, height));
 
         let context = glutin::ContextBuilder::new()
             .with_vsync(true)
@@ -31,83 +91,58 @@ fn main() {
 
         gl.clear_color(0.2, 0.2, 0.2, 1.0);
 
-        let mut world_matrix: Mat4 = [0.; 16];
-        let mut view_matrix: Mat4 = [0.; 16];
-        let mut proj_matrix: Mat4 = [0.; 16];
-
-        //mat4::identity(&mut view_matrix);
-        //mat4::identity(&mut proj_matrix);
-
-        let eye = vec3::from_values(0., 0., 5.);
-        let center = vec3::from_values(0., 0., 0.);
-        let up = vec3::from_values(0., 1., 0.);
-        let aspect = context.window().inner_size().width as f32
-            / context.window().inner_size().height as f32;
-
-        mat4::look_at(&mut view_matrix, &eye, &center, &up);
-        mat4::perspective(&mut proj_matrix, to_radian(45.), aspect, 0.1, Some(100.0));
-
         let mut frame: f32 = 1.0;
 
-        event_loop.run(move |event, _, control_flow| {
-            match event {
-                glutin::event::Event::MainEventsCleared => {
-                    context.window().request_redraw();
-                }
-                glutin::event::Event::RedrawRequested(_) => {
-                    mat4::identity(&mut world_matrix);
-                    let tmp = mat4::clone(&world_matrix);
-                    mat4::rotate(
-                        &mut world_matrix,
-                        &tmp,
-                        frame / 20.0,
-                        &vec3::from_values(0., 1., 0.),
-                    );
+        event_loop.run(move |event, _, control_flow| match event {
+            glutin::event::Event::MainEventsCleared => {
+                context.window().request_redraw();
+            }
+            glutin::event::Event::RedrawRequested(_) => {
+                state.update(frame / 20.0);
 
-                    gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
-                    gl.bind_vertex_array(Some(vertex_array));
-                    gl.use_program(Some(program));
-                    gl.uniform_matrix_4_f32_slice(
-                        gl.get_uniform_location(program, "uMMatrix").as_ref(),
-                        false,
-                        &world_matrix,
-                    );
-                    gl.uniform_matrix_4_f32_slice(
-                        gl.get_uniform_location(program, "uVMatrix").as_ref(),
-                        false,
-                        &view_matrix,
-                    );
-                    gl.uniform_matrix_4_f32_slice(
-                        gl.get_uniform_location(program, "uPMatrix").as_ref(),
-                        false,
-                        &proj_matrix,
-                    );
-                    gl.draw_arrays(glow::TRIANGLES, 0, 3);
-                    gl.use_program(None);
-                    gl.bind_vertex_array(None);
-                    context.swap_buffers().unwrap();
-                    frame += 1.0;
+                gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
+                gl.bind_vertex_array(Some(vertex_array));
+                gl.use_program(Some(program));
+                gl.uniform_matrix_4_f32_slice(
+                    gl.get_uniform_location(program, "uMMatrix").as_ref(),
+                    false,
+                    state.get_world(),
+                );
+                gl.uniform_matrix_4_f32_slice(
+                    gl.get_uniform_location(program, "uVMatrix").as_ref(),
+                    false,
+                    state.get_view(),
+                );
+                gl.uniform_matrix_4_f32_slice(
+                    gl.get_uniform_location(program, "uPMatrix").as_ref(),
+                    false,
+                    state.get_projection(),
+                );
+                gl.draw_arrays(glow::TRIANGLES, 0, 3);
+                gl.use_program(None);
+                gl.bind_vertex_array(None);
+                context.swap_buffers().unwrap();
+                frame += 1.0;
+            }
+            glutin::event::Event::WindowEvent { event, .. } => match event {
+                glutin::event::WindowEvent::CloseRequested => {
+                    control_flow.set_exit();
                 }
-                glutin::event::Event::WindowEvent { event, .. } => match event {
-                    glutin::event::WindowEvent::CloseRequested => {
-                        control_flow.set_exit();
-                    }
-                    glutin::event::WindowEvent::KeyboardInput { input, .. } => {
-                        if let Some(key_code) = input.virtual_keycode {
-                            if input.state == glutin::event::ElementState::Pressed {
-                                match key_code {
-                                    glutin::event::VirtualKeyCode::Escape => {
-                                        control_flow.set_exit();
-                                    }
-                                    _ => (),
+                glutin::event::WindowEvent::KeyboardInput { input, .. } => {
+                    if let Some(key_code) = input.virtual_keycode {
+                        if input.state == glutin::event::ElementState::Pressed {
+                            match key_code {
+                                glutin::event::VirtualKeyCode::Escape => {
+                                    control_flow.set_exit();
                                 }
+                                _ => (),
                             }
                         }
                     }
-                    _ => (),
-                },
+                }
                 _ => (),
-            }
+            },
+            _ => (),
         });
     }
 }
