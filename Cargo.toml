@@ -3,7 +3,14 @@ name = "rust-opengl-glutin-glow"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+gl_matrix = []
+glam = []
+glm = []
+
 [dependencies]
 glutin = "*"
 glow = "*"
 gl_matrix = "*"
+glam = "*"
+glm = "*"

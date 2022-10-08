@@ -11,18 +11,26 @@ struct GLMatrixState {
 
 impl MatrixState for GLMatrixState {
     fn new(width: u32, height: u32) -> Self {
-        let aspect = width as f32 / height as f32;
+        println!("use gl_matrix");
 
-        let world_matrix: gl_matrix::common::Mat4 = [0.; 16];
-        let mut view_matrix: gl_matrix::common::Mat4 = [0.; 16];
-        let mut proj_matrix: gl_matrix::common::Mat4 = [0.; 16];
+        let world_matrix: gl_matrix::common::Mat4 = [0.0; 16];
+        let mut view_matrix: gl_matrix::common::Mat4 = [0.0; 16];
+        let mut proj_matrix: gl_matrix::common::Mat4 = [0.0; 16];
 
-        let eye = gl_matrix::vec3::from_values(0., 0., 5.);
-        let center = gl_matrix::vec3::from_values(0., 0., 0.);
-        let up = gl_matrix::vec3::from_values(0., 1., 0.);
+        gl_matrix::mat4::perspective(
+            &mut proj_matrix,
+            gl_matrix::common::to_radian(45.0),
+            width as f32 / height as f32,
+            0.1,
+            Some(100.0),
+        );
 
-        gl_matrix::mat4::perspective(&mut proj_matrix, gl_matrix::common::to_radian(45.), aspect, 0.1, Some(100.0));
-        gl_matrix::mat4::look_at(&mut view_matrix, &eye, &center, &up);
+        gl_matrix::mat4::look_at(
+            &mut view_matrix,
+            &gl_matrix::vec3::from_values(0.0, 0.0, 5.0),
+            &gl_matrix::vec3::from_values(0.0, 0.0, 0.0),
+            &gl_matrix::vec3::from_values(0.0, 1.0, 0.0),
+        );
 
         Self {
             world_matrix,
@@ -33,25 +41,163 @@ impl MatrixState for GLMatrixState {
 
     fn update(&mut self, step: f32) {
         gl_matrix::mat4::identity(&mut self.world_matrix);
+
         let tmp = gl_matrix::mat4::clone(&self.world_matrix);
+
         gl_matrix::mat4::rotate(
             &mut self.world_matrix,
             &tmp,
             step,
-            &gl_matrix::vec3::from_values(0., 1., 0.),
+            &gl_matrix::vec3::from_values(0.0, 1.0, 0.0),
         );
     }
 
-    fn get_world(&self) -> &[f32] {
+    fn get_world(&mut self) -> &[f32] {
         return &self.world_matrix;
     }
 
-    fn get_view(&self) -> &[f32] {
+    fn get_view(&mut self) -> &[f32] {
         return &self.view_matrix;
     }
 
-    fn get_projection(&self) -> &[f32] {
+    fn get_projection(&mut self) -> &[f32] {
         return &self.proj_matrix;
+    }
+}
+
+struct GlamState {
+    world_matrix: glam::Mat4,
+    view_matrix: glam::Mat4,
+    proj_matrix: glam::Mat4,
+    //array: [f32; 16],
+}
+
+impl MatrixState for GlamState {
+    fn new(width: u32, height: u32) -> Self {
+        println!("use glam");
+
+        let world_matrix = glam::Mat4::IDENTITY;
+
+        let view_matrix = glam::Mat4::look_at_rh(
+            glam::Vec3::new(0.0, 0.0, 5.0),
+            glam::Vec3::new(0.0, 0.0, 0.0),
+            glam::Vec3::new(0.0, 1.0, 0.0),
+        );
+
+        let proj_matrix =
+            glam::Mat4::perspective_rh(45.0f32.to_radians(), width as f32 / height as f32, 0.1, 100.0);
+
+        Self {
+            world_matrix,
+            view_matrix,
+            proj_matrix,
+            //array: [0.0; 16],
+        }
+    }
+
+    fn update(&mut self, step: f32) {
+        //self.world_matrix = glam::Mat4::IDENTITY;
+        //self.world_matrix *= glam::Mat4::from_rotation_y(step);
+
+        self.world_matrix = glam::Mat4::from_rotation_y(step);
+    }
+
+    fn get_world(&mut self) -> &[f32] {
+        //self.array = self.world_matrix.to_cols_array();
+        //return &self.array;
+        return self.world_matrix.as_ref();
+    }
+
+    fn get_view(&mut self) -> &[f32] {
+        //self.array = self.view_matrix.to_cols_array();
+        //return &self.array;
+        return self.view_matrix.as_ref();
+    }
+
+    fn get_projection(&mut self) -> &[f32] {
+        //self.array = self.proj_matrix.to_cols_array();
+        //return &self.array;
+        return self.proj_matrix.as_ref();
+    }
+}
+
+struct GlmState {
+    world_matrix: glm::Mat4,
+    view_matrix: glm::Mat4,
+    proj_matrix: glm::Mat4,
+    array: [f32; 16],
+}
+
+impl MatrixState for GlmState {
+    fn new(width: u32, height: u32) -> Self {
+        println!("use glm");
+
+        let world_matrix = glm::Mat4::new(
+            glm::vec4(1.0, 0.0, 0.0, 0.0),
+            glm::vec4(0.0, 1.0, 0.0, 0.0),
+            glm::vec4(0.0, 0.0, 1.0, 0.0),
+            glm::vec4(0.0, 0.0, 0.0, 1.0),
+        );
+
+        let view_matrix = glm::ext::look_at(
+            glm::vec3(0.0, 0.0, 5.0),
+            glm::vec3(0.0, 0.0, 0.0),
+            glm::vec3(0.0, 1.0, 0.0),
+        );
+
+        let proj_matrix = glm::ext::perspective(45.0f32.to_radians(), width as f32 / height as f32, 0.1, 100.0);
+
+        Self {
+            world_matrix,
+            view_matrix,
+            proj_matrix,
+            array: [0.0; 16],
+        }
+    }
+
+    fn update(&mut self, step: f32) {
+        #[rustfmt::skip]
+        let identity_matrix = glm::mat4(
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0,
+        );
+
+        self.world_matrix = glm::ext::rotate(&identity_matrix, step, glm::vec3(0.0, 1.0, 0.0));
+    }
+
+    fn get_world(&mut self) -> &[f32] {
+        let mut i = 0;
+        for a in self.world_matrix.as_array() {
+            for v in a.as_array() {
+                self.array[i] = *v;
+                i += 1;
+            }
+        }
+        return &self.array;
+    }
+
+    fn get_view(&mut self) -> &[f32] {
+        let mut i = 0;
+        for a in self.view_matrix.as_array() {
+            for v in a.as_array() {
+                self.array[i] = *v;
+                i += 1;
+            }
+        }
+        return &self.array;
+    }
+
+    fn get_projection(&mut self) -> &[f32] {
+        let mut i = 0;
+        for a in self.proj_matrix.as_array() {
+            for v in a.as_array() {
+                self.array[i] = *v;
+                i += 1;
+            }
+        }
+        return &self.array;
     }
 }
 
@@ -59,7 +205,14 @@ fn main() {
     let width = 640;
     let height = 480;
 
+    #[cfg(feature = "gl_matrix")]
     let mut state = GLMatrixState::new(width, height);
+
+    #[cfg(feature = "glam")]
+    let mut state = GlamState::new(width, height);
+
+    #[cfg(feature = "glm")]
+    let mut state = GlmState::new(width, height);
 
     unsafe {
         let event_loop = glutin::event_loop::EventLoop::new();
@@ -101,25 +254,31 @@ fn main() {
                 gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
                 gl.bind_vertex_array(Some(vertex_array));
                 gl.use_program(Some(program));
+
                 gl.uniform_matrix_4_f32_slice(
                     gl.get_uniform_location(program, "uMMatrix").as_ref(),
                     false,
                     state.get_world(),
                 );
+
                 gl.uniform_matrix_4_f32_slice(
                     gl.get_uniform_location(program, "uVMatrix").as_ref(),
                     false,
                     state.get_view(),
                 );
+
                 gl.uniform_matrix_4_f32_slice(
                     gl.get_uniform_location(program, "uPMatrix").as_ref(),
                     false,
                     state.get_projection(),
                 );
+
                 gl.draw_arrays(glow::TRIANGLES, 0, 3);
                 gl.use_program(None);
                 gl.bind_vertex_array(None);
+
                 context.swap_buffers().unwrap();
+
                 frame += 1.0;
             }
             glutin::event::Event::WindowEvent { event, .. } => match event {
