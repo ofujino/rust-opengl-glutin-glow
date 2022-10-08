@@ -84,8 +84,12 @@ impl MatrixState for GlamState {
             glam::Vec3::new(0.0, 1.0, 0.0),
         );
 
-        let proj_matrix =
-            glam::Mat4::perspective_rh(45.0f32.to_radians(), width as f32 / height as f32, 0.1, 100.0);
+        let proj_matrix = glam::Mat4::perspective_rh(
+            45.0f32.to_radians(),
+            width as f32 / height as f32,
+            0.1,
+            100.0,
+        );
 
         Self {
             world_matrix,
@@ -145,7 +149,12 @@ impl MatrixState for GlmState {
             glm::vec3(0.0, 1.0, 0.0),
         );
 
-        let proj_matrix = glm::ext::perspective(45.0f32.to_radians(), width as f32 / height as f32, 0.1, 100.0);
+        let proj_matrix = glm::ext::perspective(
+            45.0f32.to_radians(),
+            width as f32 / height as f32,
+            0.1,
+            100.0,
+        );
 
         Self {
             world_matrix,
