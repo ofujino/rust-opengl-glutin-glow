@@ -201,6 +201,97 @@ impl MatrixState for GlmState {
     }
 }
 
+struct CGMathState {
+    world_matrix: cgmath::Matrix4<f32>,
+    view_matrix: cgmath::Matrix4<f32>,
+    proj_matrix: cgmath::Matrix4<f32>,
+}
+
+impl MatrixState for CGMathState {
+    fn new(width: u32, height: u32) -> Self {
+        println!("use cgmath");
+
+        /*
+        #[rustfmt::skip]
+        let world_matrix = cgmath::Matrix4::<f32>::new(
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0,
+        }
+        */
+
+        #[rustfmt::skip]
+        let world_matrix: cgmath::Matrix4<f32> = cgmath::Matrix4::from_cols(
+            cgmath::Vector4 { x: 1.0, y: 0.0, z: 0.0, w: 0.0 },
+            cgmath::Vector4 { x: 0.0, y: 1.0, z: 0.0, w: 0.0 },
+            cgmath::Vector4 { x: 0.0, y: 0.0, z: 1.0, w: 0.0 },
+            cgmath::Vector4 { x: 0.0, y: 0.0, z: 0.0, w: 1.0 },
+        );
+
+        #[rustfmt::skip]
+        let view_matrix: cgmath::Matrix4<f32> = cgmath::Matrix4::look_at(
+            cgmath::Point3 {
+                x: 0.0,
+                y: 0.0,
+                z: 5.0,
+            },
+            cgmath::Point3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            /*
+            cgmath::Vector3 {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+            },
+            */
+            cgmath::Vector3::unit_y(),
+        );
+
+        #[rustfmt::skip]
+        let proj_matrix: cgmath::Matrix4<f32> = cgmath::perspective(
+            cgmath::Deg(45.0f32),
+            width as f32 / height as f32,
+            0.1,
+            100.0
+        );
+
+        Self {
+            world_matrix,
+            view_matrix,
+            proj_matrix,
+        }
+    }
+
+    fn update(&mut self, step: f32) {
+        //self.world_matrix = cgmath::Matrix4::from_angle_y(cgmath::Rad(step));
+
+        let mut world_matrix = cgmath::SquareMatrix::identity();
+
+        world_matrix = world_matrix * cgmath::Matrix4::from_angle_y(cgmath::Rad(step));
+
+        self.world_matrix = world_matrix;
+    }
+
+    fn get_world(&mut self) -> &[f32] {
+        let array: &[f32; 16] = self.world_matrix.as_ref();
+        return array;
+    }
+
+    fn get_view(&mut self) -> &[f32] {
+        let array: &[f32; 16] = self.view_matrix.as_ref();
+        return array;
+    }
+
+    fn get_projection(&mut self) -> &[f32] {
+        let array: &[f32; 16] = self.proj_matrix.as_ref();
+        return array;
+    }
+}
+
 fn main() {
     let width = 640;
     let height = 480;
@@ -213,6 +304,9 @@ fn main() {
 
     #[cfg(feature = "glm")]
     let mut state = GlmState::new(width, height);
+
+    #[cfg(feature = "cgmath")]
+    let mut state = CGMathState::new(width, height);
 
     unsafe {
         let event_loop = glutin::event_loop::EventLoop::new();
