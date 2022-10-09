@@ -286,18 +286,21 @@ impl MatrixState for CGMathState {
     }
 
     fn get_world(&mut self) -> &[f32] {
-        let array: &[f32; 16] = self.world_matrix.as_ref();
-        return array;
+        //let array: &[f32; 16] = self.world_matrix.as_ref();
+        //return array;
+        return &self.world_matrix.as_ref() as &[f32; 16];
     }
 
     fn get_view(&mut self) -> &[f32] {
-        let array: &[f32; 16] = self.view_matrix.as_ref();
-        return array;
+        //let array: &[f32; 16] = self.view_matrix.as_ref();
+        //return array;
+        return &self.view_matrix.as_ref() as &[f32; 16];
     }
 
     fn get_projection(&mut self) -> &[f32] {
-        let array: &[f32; 16] = self.proj_matrix.as_ref();
-        return array;
+        //let array: &[f32; 16] = self.proj_matrix.as_ref();
+        //return array;
+        return self.proj_matrix.as_ref() as &[f32; 16];
     }
 }
 
